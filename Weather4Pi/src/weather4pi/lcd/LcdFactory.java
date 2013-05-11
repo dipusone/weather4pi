@@ -15,7 +15,6 @@ public class LcdFactory {
 						                    RaspiPin.GPIO_01,  // LCD data bit 2
 						                    RaspiPin.GPIO_02,  // LCD data bit 3
 						                    RaspiPin.GPIO_03); // LCD data bit 4
-
 	
 	public static LCD createWeather4PiLcd(){
 		return weatherLcd;

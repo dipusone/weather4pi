@@ -49,8 +49,8 @@ public class ViewWeatherTask extends TimerTask {
 											temperature.getMinimum(),
 											temperature.getMaximum());
 			String line2 = forecast.getSymbol().getDescription();
-			System.out.println(line1 + " - length: " + line1.length());
-			System.out.println(line2 + " - length: " + line2.length());
+			System.out.println(line1);
+			System.out.println(line2);
 		}
 	}
 	
