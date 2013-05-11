@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="copyAndRun" name="Weather4Pi">
+    <property environment="env"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target.jvm" value="1.6"/>
+    <property name="source.jvm" value="1.6"/>
+	
+	<!-- IMPORTANT: note that that we cannot use these variables in sshexec command, edit those manually -->
+	<property name="user" value="pi" />
+	<property name="password" value="raspberry" />
+
+    <property name="pkill.argument" value="'java.*${ant.project.name}'"/>
+    <property name="jar.name" value="${ant.project.name}.jar"/>
+    <property name="jar.path" value="bin/${jar.name}"/>
+	<property name="remote.ip" value="192.168.1.9" />
+	<property name="remote.path.full" value="${user}@${remote.ip}:/tmp" />
+	<property name="remote.path" value="/tmp" />
+	<property name="classpath" value="bin" />
+	<property name="classpath1" value="lib" />
+
+    <path id="master-classpath">
+        <fileset dir="${classpath}">
+        	<include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${classpath1}">
+        	<include name="**/*.jar"/>
+        </fileset>
+    </path>
+	
+	<!-- MAJOR TARGETS START -->
+	<target name="createBinaries">
+		<antcall target="clean" />
+		<antcall target="init" />
+		<antcall target="build" />
+		<antcall target="jar" />
+	</target>
+	<target depends="createBinaries" name="copyAndRun">
+		<antcall target="userAndPassword" />
+		<antcall target="copySCP" />
+		<antcall target="killRemoteApp" />
+		<antcall target="runOverSSH" />
+	</target>
+	<!-- MAJOR TARGETS END -->
+	
+	<!-- BINARIES MANAGEMENT START -->
+    <target name="clean">
+        <delete dir="bin"/>
+    </target>
+    <target name="init">
+        <mkdir dir="bin"/>
+        <copy includeemptydirs="false" todir="bin">
+            <fileset dir="src">
+                <exclude name="**/*.launch"/>
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    </target>
+    <target name="build">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+    	<!-- for some reason javac will end good (degree sign gets me to an error), when a presetdef is set (whatever that is) -->
+        <javac classpath=".;*.jar" includeantruntime="false" debug="true" debuglevel="${debuglevel}" destdir="bin" source="${source.jvm}" target="${target.jvm}">
+            <src path="src"/>
+        	<classpath refid="master-classpath" />
+        </javac>
+    </target>
+	<target name="jar">
+	    <jar destfile="${jar.path}" excludes="**/*.jar" basedir="bin">
+	        <manifest>
+	            <attribute name="Main-Class" value="Main"/>
+	        </manifest>
+	    </jar>
+	</target>
+	<!-- BINARIES MANAGEMENT END -->
+	
+	<!-- REMOTE SYSTEM MANAGEMENT START -->
+	<target name="userAndPassword">
+		<property name="user" value="${default.user}" />
+		<property name="password" value="${default.password}" />
+	</target>
+
+	<target name="copySCP">
+		<echo message="deploying jar file file to: ${remote.path.full}"/>
+		<scp file="${jar.path}" todir="${remote.path.full}" password="raspberry" trust="true"/>
+	</target>
+	
+	<target name="killRemoteApp">
+		<!-- do not fail on error, maybe the application is not running anymore.. -->
+		<!-- IMPORTANT: we can't use global variables in username nor in password -->
+		<sshexec host="${remote.ip}" 
+		   username="pi"
+		   password="raspberry"
+		   trust="true" 
+		   failonerror="false"
+		   command="pkill -f ${pkill.argument}">
+		   </sshexec>
+	</target>
+
+	<target name="runOverSSH" description="run the jar on the remote system with debug parameters">
+		<!-- IMPORTANT: we can't use global variables in username nor in password -->
+		<sshexec host="${remote.ip}"
+		   username="pi"
+		   password="raspberry"
+		   trust="true" 
+		   command="(cd ${remote.path}; java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8000,suspend=n -jar ${jar.name})">
+		   </sshexec>
+	</target>
+	<!-- REMOTE SYSTEM MANAGEMENT END -->
+
+</project>
